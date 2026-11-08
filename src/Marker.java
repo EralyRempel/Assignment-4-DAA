@@ -11,8 +11,18 @@ public class Marker {
      * Example: p = "ACGAC" gives [0, 0, 0, 1, 2]. The last number is the "Border length" line.
      */
     public static int[] prefixFunction(String p) {
-        // TODO Mission 3a
-        return new int[p.length()];
+         int m = p.length();
+        int[] pi = new int[m];
+        for (int i = 1, len = 0; i < m; ) {
+            if (p.charAt(i) == p.charAt(len)) {
+                pi[i++] = ++len;
+            } else if (len != 0) {
+                len = pi[len - 1];
+            } else {
+                pi[i++] = 0;
+            }
+        }
+        return pi;
     }
 
     /**
@@ -22,8 +32,24 @@ public class Marker {
      * the first one is "First hit" (-1 when there is none).
      */
     public static int[] findAll(String text, String p) {
-        // TODO Mission 3b
-        return new int[0];
+        int n = text.length(), m = p.length();
+        if (n < m || m == 0) return new int[0];
+        int[] pi = prefixFunction(p);
+        List<Integer> res = new ArrayList<>();
+
+        for (int i = 0, j = 0; i < n; ) {
+            if (text.charAt(i) == p.charAt(j)) {
+                i++; j++;
+            }
+            if (j == m) {
+                res.add(i - j);
+                j = pi[j - 1];
+            } else if (i < n && text.charAt(i) != p.charAt(j)) {
+                if (j != 0) j = pi[j - 1];
+                else i++;
+            }
+        }
+        return res.stream().mapToInt(i -> i).toArray();
     }
 
     /**
