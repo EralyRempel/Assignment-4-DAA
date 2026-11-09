@@ -61,30 +61,34 @@ public class Marker {
      * Example: a = "ACGTAC", b = "TTACGT", k = 4: the words of a are ACGT, CGTA, GTAC; only ACGT is in b, so the answer is 1.
      */
     public static int sharedWords(String a, String b, int k) {
-        if (a.length() < k || b.length() < k || k <= 0) return 0;
+         if (a.length() < k || b.length() < k || k <= 0) return 0;
         long p = 31, mod = 1_000_000_009L;
 
-        long[] pPow = new long[Math.max(a.length(), b.length()) + 1];
+        long[] pPow = new long[k];
         pPow[0] = 1;
-        for (int i = 1; i < pPow.length; i++) pPow[i] = (pPow[i - 1] * p) % mod;
-
-        long[] bH = new long[b.length() + 1];
-        for (int i = 0; i < b.length(); i++) bH[i + 1] = (bH[i] + b.charAt(i) * pPow[i]) % mod;
-
-        Set<Long> bSet = new HashSet<>();
-        for (int i = 0; i + k <= b.length(); i++) {
-            long h = (bH[i + k] - bH[i] + mod) % mod;
-            bSet.add((h * pPow[b.length() - 1 - i]) % mod);
+        for (int i = 1; i < k; i++) {
+            pPow[i] = (pPow[i - 1] * p) % mod;
         }
 
-        long[] aH = new long[a.length() + 1];
-        for (int i = 0; i < a.length(); i++) aH[i + 1] = (aH[i] + a.charAt(i) * pPow[i]) % mod;
+        // Compute hashes for all windows of length k in b
+        Set<Long> bSet = new HashSet<>();
+        for (int j = 0; j + k <= b.length(); j++) {
+            long h = 0;
+            for (int x = 0; x < k; x++) {
+                h = (h + (long) b.charAt(j + x) * pPow[x]) % mod;
+            }
+            bSet.add(h);
+        }
 
+        // Check windows in a
         int count = 0;
         for (int i = 0; i + k <= a.length(); i++) {
-            long h = (aH[i + k] - aH[i] + mod) % mod;
-            long norm = (h * pPow[a.length() - 1 - i]) % mod;
-            if (bSet.contains(norm)) {
+            long h = 0;
+            for (int x = 0; x < k; x++) {
+                h = (h + (long) a.charAt(i + x) * pPow[x]) % mod;
+            }
+            if (bSet.contains(h)) {
+                // Verify with substring equality to handle potential hash collisions
                 String sub = a.substring(i, i + k);
                 for (int j = 0; j + k <= b.length(); j++) {
                     if (b.substring(j, j + k).equals(sub)) {
