@@ -61,7 +61,39 @@ public class Marker {
      * Example: a = "ACGTAC", b = "TTACGT", k = 4: the words of a are ACGT, CGTA, GTAC; only ACGT is in b, so the answer is 1.
      */
     public static int sharedWords(String a, String b, int k) {
-        // TODO Mission 4
-        return -1;
+        if (a.length() < k || b.length() < k || k <= 0) return 0;
+        long p = 31, mod = 1_000_000_009L;
+
+        long[] pPow = new long[Math.max(a.length(), b.length()) + 1];
+        pPow[0] = 1;
+        for (int i = 1; i < pPow.length; i++) pPow[i] = (pPow[i - 1] * p) % mod;
+
+        long[] bH = new long[b.length() + 1];
+        for (int i = 0; i < b.length(); i++) bH[i + 1] = (bH[i] + b.charAt(i) * pPow[i]) % mod;
+
+        Set<Long> bSet = new HashSet<>();
+        for (int i = 0; i + k <= b.length(); i++) {
+            long h = (bH[i + k] - bH[i] + mod) % mod;
+            bSet.add((h * pPow[b.length() - 1 - i]) % mod);
+        }
+
+        long[] aH = new long[a.length() + 1];
+        for (int i = 0; i < a.length(); i++) aH[i + 1] = (aH[i] + a.charAt(i) * pPow[i]) % mod;
+
+        int count = 0;
+        for (int i = 0; i + k <= a.length(); i++) {
+            long h = (aH[i + k] - aH[i] + mod) % mod;
+            long norm = (h * pPow[a.length() - 1 - i]) % mod;
+            if (bSet.contains(norm)) {
+                String sub = a.substring(i, i + k);
+                for (int j = 0; j + k <= b.length(); j++) {
+                    if (b.substring(j, j + k).equals(sub)) {
+                        count++;
+                        break;
+                    }
+                }
+            }
+        }
+        return count;
     }
 }
