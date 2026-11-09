@@ -1,33 +1,114 @@
 import java.util.*;
 
-/**
- * Mission 5. Dynamic programming on the tree of infections. Root the tree in person 0.
- * Input.Tree.neighbours() gives the neighbours of every person. The number of people is at most about 100, so a recursive DFS is fine here.
- */
 public class Outbreak {
 
     /**
-     * Choose people to test so that for every link (somebody infected somebody) at least one of the two is tested,
-     * and the total cost of testing is as small as possible. cost[v] is the price of testing person v.
-     * Returns tested[v] = true if person v is tested.
-     *
-     * State for every person v (looking only at v and everything below it): the smallest cost when v IS tested, and
-     * the smallest cost when v is NOT tested. What must then be true about the children of v in each case?
-     * Do not forget to rebuild the answer (who exactly is tested), not only the cost: the picture needs it.
-     * Main calls this twice: with all costs equal to 1 (the line "Tests needed") and with the real costs ("Cheapest testing").
+     * Mission 5a. Dynamic programming on the tree of infections (Weighted Vertex Cover)
+     * with solution reconstruction (which people are tested).
      */
     public static boolean[] cheapestTests(int n, int[][] nb, int[] cost) {
-        // TODO Mission 5a
-        return new boolean[n];
+        // 1. Root the tree using BFS to get parent relationships and traversal order
+        int[] parent = new int[n];
+        Arrays.fill(parent, -1);
+        List<Integer> order = new ArrayList<>();
+        boolean[] visited = new boolean[n];
+
+        Queue<Integer> queue = new LinkedList<>();
+        queue.add(0);
+        visited[0] = true;
+
+        while (!queue.isEmpty()) {
+            int u = queue.poll();
+            order.add(u);
+            for (int v : nb[u]) {
+                if (!visited[v]) {
+                    visited[v] = true;
+                    parent[v] = u;
+                    queue.add(v);
+                }
+            }
+        }
+
+        // Post-order traversal (from leaves to root) for DP computation
+        List<Integer> postOrder = new ArrayList<>(order);
+        Collections.reverse(postOrder);
+
+        // dp[u][0] = min cost if u is NOT tested
+        // dp[u][1] = min cost if u IS tested
+        long[][] dp = new long[n][2];
+
+        for (int u : postOrder) {
+            dp[u][0] = 0;
+            dp[u][1] = cost[u];
+
+            for (int v : nb[u]) {
+                if (v != parent[u]) {
+                    dp[u][0] += dp[v][1];
+                    dp[u][1] += Math.min(dp[v][0], dp[v][1]);
+                }
+            }
+        }
+
+        // 2. Reconstruct the solution (determine who is tested)
+        boolean[] tested = new boolean[n];
+        tested[0] = dp[0][1] <= dp[0][0];
+
+        // Top-down pass using BFS order to decide status of children based on parent
+        for (int u : order) {
+            for (int v : nb[u]) {
+                if (v != parent[u]) {
+                    if (!tested[u]) {
+                        // If parent is not tested, child must be tested
+                        tested[v] = true;
+                    } else {
+                        // If parent is tested, child is chosen based on optimal DP choice
+                        tested[v] = dp[v][1] <= dp[v][0];
+                    }
+                }
+            }
+        }
+
+        return tested;
     }
 
     /**
-     * The number of links on the longest chain of infections, that is the longest path in the tree (counted in links).
-     * A path goes up from one person and down to another; for every person you need the two longest ways down.
-     * Example: a line 0-1-2-3 has chain 3; a star with centre 0 and leaves 1, 2, 3 has chain 2.
+     * Mission 5b. The number of links on the longest chain of infections (Diameter of the tree).
      */
     public static int longestChain(int n, int[][] nb) {
-        // TODO Mission 5b
-        return -1;
+        if (n <= 1) return 0;
+
+        // Find the farthest node from the root (0)
+        int[] firstBFS = bfsFarthest(0, n, nb);
+        int u = firstBFS[0];
+
+        // Find the farthest node from u (gives the tree diameter endpoints)
+        int[] secondBFS = bfsFarthest(u, n, nb);
+        return secondBFS[1]; // Maximum distance in edges
+    }
+
+    private static int[] bfsFarthest(int start, int n, int[][] nb) {
+        int[] dist = new int[n];
+        Arrays.fill(dist, -1);
+        Queue<Integer> q = new LinkedList<>();
+
+        q.add(start);
+        dist[start] = 0;
+        int farthestNode = start;
+        int maxDist = 0;
+
+        while (!q.isEmpty()) {
+            int u = q.poll();
+            if (dist[u] > maxDist) {
+                maxDist = dist[u];
+                farthestNode = u;
+            }
+            for (int v : nb[u]) {
+                if (dist[v] == -1) {
+                    dist[v] = dist[u] + 1;
+                    q.add(v);
+                }
+            }
+        }
+        return new int[] { farthestNode, maxDist };
     }
 }
